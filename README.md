@@ -1,4 +1,4 @@
-                                        Proyecto de videovigilancia de Sistemas Operativos Avanzados
+Proyecto de videovigilancia de Sistemas Operativos Avanzados
 			
 Grupo 01:
 
