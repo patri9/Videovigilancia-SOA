@@ -49,6 +49,20 @@ public:
     //Variables para readData
     qint64 serialSize;
     bool status;
+    //qint32 condicion;
+
+    quint32 size_cab;
+    quint32 size_pro;
+    quint32 tam_cabecera;
+    quint32 tam_nombre_camara;
+    qint64 timestamp;
+    qint32 tam;
+    qint32 num_rect;
+    qint32 sizeCabecera;
+    qint32 TotalsizeCabecera;
+    qint32 condicion;
+    bool flag;
+
 
 private slots:
     void on_Quit_clicked();
