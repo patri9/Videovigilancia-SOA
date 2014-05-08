@@ -15,8 +15,6 @@ ViewerWindow::ViewerWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    status = false;
-    //condicion = 0;
     tam = 0;
     condicion = 0;
 
@@ -142,7 +140,6 @@ void ViewerWindow::mostrar(const QImage &imagen)
 void ViewerWindow::on_actionCapturar_triggered()
 {
 
- //   camera = new QCamera(conf.value("Camera", camara0).toByteArray());
 
     if (camera==NULL)
     {
@@ -182,26 +179,7 @@ void ViewerWindow::send()
 
 void ViewerWindow::readData()
 {
-    /*
-    quint32 size_cab;
-    quint32 size_pro;
-    quint32 tam_cabecera;
-    quint32 tam_nombre_camara;
-    qint64 timestamp;
-    qint32 tam=0;
-    qint32 x,y,ancho,alto;
-    qint32 num_rect;
-    qint32 sizeCabecera;
-    qint32 TotalsizeCabecera;
-    qint32 TotalsizeRect;
-    QVector<QRect> vRect;
-    QImage imagen;
-    qint32 condicion = 0;
-    bool flag = true;
-    */
 
-
-   // QImage imagen;
     flag = true;
     qint32 TotalsizeRect;
     qint32 x,y,ancho,alto;
@@ -214,12 +192,7 @@ void ViewerWindow::readData()
             switch (condicion)
             {
             case 0:
-                /*
-                * Hay que poner un case que compruebe si ha llegado sizeCabecera, si no ha llegado,
-                * salir y volver a empezar desde aqui, con una señal que indique que aqui se quedó leyendo.
-                * sizeCabecera es: qint32 sizeCabecera =tam_cabecera;
-                * condicion = 0
-                */
+
                 sizeCabecera = sizeof(tam_cabecera);
                 if( sizeCabecera <= clientConnection->bytesAvailable())
                 {
@@ -285,7 +258,6 @@ void ViewerWindow::readData()
                 {
                     QByteArray image = clientConnection->read(tam);
                     imagen->loadFromData(image, "jpeg");
-                    qDebug() << "Se acaba de leer la imagen ";
                     condicion = 4;
                 }
                 else
@@ -317,19 +289,14 @@ void ViewerWindow::readData()
 
 
                 TotalsizeRect = sizeof(x)*4*num_rect;
-                qDebug() << "Total de datos a mandar de los rectangulos : " << TotalsizeRect;
                 if(TotalsizeRect <= clientConnection->bytesAvailable())
                 {
                     for(int i=0; i<num_rect; i++)
                     {
-                        clientConnection->read((char*)&x,sizeof(x));
-                        //qDebug() << "X: " << x;
+                        clientConnection->read((char*)&x,sizeof(x));;
                         clientConnection->read((char*)&y,sizeof(y));
-                        //qDebug() << "Y: " << y;
                         clientConnection->read((char*)&ancho,sizeof(ancho));
-                        //qDebug() << "Ancho: " << ancho;
                         clientConnection->read((char*)&alto,sizeof(alto));
-                        //qDebug() << "Alto: " << alto;
 
                         QRect rect(x,y,ancho,alto);
                         vRect.append(rect);
@@ -340,7 +307,6 @@ void ViewerWindow::readData()
                 }
                 else
                 {
-                    //qDebug() << "Está atascado en el caso 5 ";
                     condicion = 5;
                     flag = false;
                     break;
@@ -348,7 +314,7 @@ void ViewerWindow::readData()
 
 
             case 6:
-                    qDebug() << "Estoy pintando";
+
                     //Copia de la imagen.
                     QImage frame = *imagen;
 
@@ -362,7 +328,6 @@ void ViewerWindow::readData()
                     QPixmap pixmap;
                     pixmap.convertFromImage(frame);
                     ui->label->setPixmap(pixmap);
-                    qDebug() << "Acabo de pintar un frame";
 
                     condicion = 0;
 

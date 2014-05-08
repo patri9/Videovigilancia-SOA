@@ -47,9 +47,6 @@ public:
 
 public:
     //Variables para readData
-    qint64 serialSize;
-    bool status;
-    //qint32 condicion;
 
     quint32 size_cab;
     quint32 size_pro;
