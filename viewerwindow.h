@@ -8,6 +8,7 @@
 #include "preferencias.h"
 #include "ui_preferencias.h"
 #include "capturebuffer.h"
+#include "c_asincrono.h"
 #include <QMainWindow>
 #include <QFileDialog>
 #include <QFile>
@@ -60,6 +61,12 @@ public:
     qint32 condicion;
     bool flag;
 
+    qint32 cont;
+    QString hex;
+    QDir directorio;
+
+    qint32 flag_port;
+
 
 private slots:
     void on_Quit_clicked();
@@ -88,6 +95,7 @@ private:
     CaptureBuffer *captureBuffer;    
     QImage *imagen;
     QSettings conf;
+
 
     //Server
     QTcpServer *tcpServer;
