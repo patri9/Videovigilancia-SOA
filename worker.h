@@ -17,7 +17,7 @@
 #include <QPainter>
 #include <QTcpSocket>
 
-#include <ui_viewerwindow.h>
+//#include <ui_viewerwindow.h>
 
 #include <vector>
 

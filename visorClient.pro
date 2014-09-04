@@ -10,27 +10,21 @@ QT       += network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = visor
+TARGET = visor_cliente
 TEMPLATE = app
 
 SOURCES += main.cpp\
         viewerwindow.cpp \
-    acercadedialog.cpp \
-    preferencias.cpp \
     capturebuffer.cpp \
     cvmatandqimage.cpp \
     worker.cpp
 
 HEADERS  += viewerwindow.h \
-    acercadedialog.h \
-    preferencias.h \
     capturebuffer.h \
     cvmatandqimage.h \
     worker.h
 
-FORMS    += viewerwindow.ui \
-    acercadedialog.ui \
-    preferencias.ui
+FORMS    +=
 
 INCLUDEPATH += /usr/local/include
 LIBS += -L/usr/local/lib \
@@ -42,5 +36,51 @@ OTHER_FILES += \
     opencv.pri \
     QtOpenCV.pri
 
+
+macx {
+    # Variables
+    #
+    isEmpty(PREFIX) {
+        PREFIX = /usr/local
+    }
+
+    MOC_DIR = ./moc
+    OBJECTS_DIR = ./object
+
+    BINDIR  = $$PREFIX/bin
+    DATADIR = $$PREFIX/share
+    CONFDIR = /etc
+
+    isEmpty(VARDIR) {
+        VARDIR  = /var/lib/$${TARGET}
+    }
+
+    DEFINES += APP_DATADIR=\\\"$$DATADIR\\\"
+    DEFINES += APP_VARDIR=\\\"$$VARDIR\\\"
+    DEFINES += APP_CONFFILE=\\\"$$CONFDIR/$${TARGET}.ini\\\"
+
+    # Install
+    #
+    INSTALLS += target config desktop icon32 vardir
+
+    ## Instalar ejecutable
+    target.path = $$BINDIR
+
+    ## Instalar archivo de configuración
+    config.path = $$CONFDIR
+    config.files += $${TARGET}.ini
+
+    ## Instalar acceso directo en el menú del escritorio
+    desktop.path = $$DATADIR/applications
+    desktop.files += $${TARGET}.desktop
+
+    ## Instalar icono de aplicación
+    icon32.path = $$DATADIR/icons/hicolor/32x32/apps
+    icon32.files += ./data/32x32/$${TARGET}.png
+
+    ## Crear directorio de archivos variables
+    vardir.path = $$VARDIR
+    vardir.commands = :
+}
 
 

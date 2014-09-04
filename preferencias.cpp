@@ -1,5 +1,5 @@
 #include "preferencias.h"
-#include "ui_preferencias.h"
+//#include "ui_preferencias.h"
 #include <QString>
 
 Preferencias::Preferencias(QWidget *parent) :
