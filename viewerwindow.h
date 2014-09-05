@@ -2,7 +2,6 @@
 #define VIEWERWINDOW_H
 
 #include <QObject>
-#include "getopt.h"
 #include "capturebuffer.h"
 #include "cvmatandqimage.h"
 #include "worker.h"
@@ -42,6 +41,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <getopt.h>
 #include <QSocketNotifier>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <signal.h>
 #include <sys/types.h>

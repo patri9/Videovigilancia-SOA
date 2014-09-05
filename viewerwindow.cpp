@@ -21,7 +21,7 @@ ViewerWindow::ViewerWindow(QObject *parent):
 
     Capturar();
 
-    QSettings conf1(APP_CONFFILE, QSettings::IniFormat);
+    QSettings conf(APP_CONFFILE, QSettings::IniFormat);
 
     //connect(movie_, SIGNAL(updated(const QRect&)), this, SLOT(on_movie_updated(const QRect&)));
 
@@ -103,7 +103,7 @@ void ViewerWindow::workAsync(const QImage& imagen)
 }
 
 
-//SLOT mostrar
+//SLOT
 void ViewerWindow::mostrar(const QImage &frame, QVector<QRect> vRect)
 {
     //Se crea una copia de la imagen.
@@ -239,7 +239,6 @@ void ViewerWindow::Capturar()
         }
     }
 }
-
 
 
 //
