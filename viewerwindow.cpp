@@ -23,13 +23,13 @@ ViewerWindow::ViewerWindow(QObject *parent):
 
     QSettings conf(APP_CONFFILE, QSettings::IniFormat);
 
-    //connect(movie_, SIGNAL(updated(const QRect&)), this, SLOT(on_movie_updated(const QRect&)));
+    connect(movie_, SIGNAL(updated(const QRect&)), this, SLOT(on_movie_updated(const QRect&)));
 
     qRegisterMetaType< QImage >("QImage");
     // Registra QVector<QRect> como tipo en qt para que sea reconocido
     qRegisterMetaType< QVector<QRect> >("QVector<QRect>");
 
-//    connect(this, SIGNAL(PasarImagen(const QImage &)), &Worker_, SLOT(doWork(const QImage &)));
+    //connect(this, SIGNAL(PasarImagen(const QImage &)), &Worker_, SLOT(doWork(const QImage &)));
     connect(& Worker_, SIGNAL(ImageWorked(const QImage&, QVector<QRect>)), this, SLOT(mostrar(const QImage&, QVector<QRect>)));
 
     Worker_.moveToThread(&workingThread_);
@@ -210,9 +210,9 @@ void ViewerWindow::repro()
 //Captura WebCam
 void ViewerWindow::Capturar()
 {
-
     if (camera==NULL)
     {
+        conf.setValue("Camera", "/dev/video0");
         camera = new QCamera(conf.value("Camera").toByteArray());
         captureBuffer = new CaptureBuffer;
         camera->setViewfinder(captureBuffer);
