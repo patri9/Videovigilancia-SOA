@@ -17,19 +17,21 @@ ViewerWindow::ViewerWindow(QObject *parent):
     tcpSocket = new QTcpSocket(this);
 
     captureBuffer = new CaptureBuffer;
-    connect(captureBuffer, SIGNAL(senial(const QImage&)), this, SLOT(mostrar(const QImage&)));
+    //connect(captureBuffer, SIGNAL(senial(const QImage&)), this, SLOT(mostrar(const QImage&, QVector<QRect>)));
+    //connect(captureBuffer, SIGNAL(senial(const QImage&)), this, SLOT(mostrar(const QImage&)));
 
     Capturar();
 
-    QSettings conf(APP_CONFFILE, QSettings::IniFormat);
 
-    connect(movie_, SIGNAL(updated(const QRect&)), this, SLOT(on_movie_updated(const QRect&)));
+    QSettings conf1(APP_CONFFILE, QSettings::IniFormat);
+
+    //connect(movie_, SIGNAL(updated(const QRect&)), this, SLOT(on_movie_updated(const QRect&)));
 
     qRegisterMetaType< QImage >("QImage");
     // Registra QVector<QRect> como tipo en qt para que sea reconocido
     qRegisterMetaType< QVector<QRect> >("QVector<QRect>");
 
-    //connect(this, SIGNAL(PasarImagen(const QImage &)), &Worker_, SLOT(doWork(const QImage &)));
+//    connect(this, SIGNAL(PasarImagen(const QImage &)), &Worker_, SLOT(doWork(const QImage &)));
     connect(& Worker_, SIGNAL(ImageWorked(const QImage&, QVector<QRect>)), this, SLOT(mostrar(const QImage&, QVector<QRect>)));
 
     Worker_.moveToThread(&workingThread_);
@@ -103,7 +105,7 @@ void ViewerWindow::workAsync(const QImage& imagen)
 }
 
 
-//SLOT
+//SLOT mostrar
 void ViewerWindow::mostrar(const QImage &frame, QVector<QRect> vRect)
 {
     //Se crea una copia de la imagen.
@@ -210,6 +212,7 @@ void ViewerWindow::repro()
 //Captura WebCam
 void ViewerWindow::Capturar()
 {
+
     if (camera==NULL)
     {
         conf.setValue("Camera", "/dev/video0");
@@ -239,6 +242,7 @@ void ViewerWindow::Capturar()
         }
     }
 }
+
 
 
 //

@@ -41,11 +41,12 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <getopt.h>
 #include <QSocketNotifier>
-#include <unistd.h>
 #include <sys/socket.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unistd.h>
+
 
 int setupUnixSignalHandlers();
 

@@ -37,19 +37,19 @@ OTHER_FILES += \
     QtOpenCV.pri
 
 
-macx {
+unix {          # Esta configuración específica de Linux y UNIX
     # Variables
     #
     isEmpty(PREFIX) {
         PREFIX = /usr/local
     }
 
-    MOC_DIR = ./moc
-    OBJECTS_DIR = ./object
+    MOC_DIR= ./moc
+    OBJECTS_DIR= ./object
 
     BINDIR  = $$PREFIX/bin
-    DATADIR = $$PREFIX/share
-    CONFDIR = /etc
+    # DATADIR = $$PREFIX/share
+    CONFDIR = /etc/xdg
 
     isEmpty(VARDIR) {
         VARDIR  = /var/lib/$${TARGET}
@@ -61,7 +61,7 @@ macx {
 
     # Install
     #
-    INSTALLS += target config desktop icon32 vardir
+    INSTALLS += target config # desktop icon32 vardir
 
     ## Instalar ejecutable
     target.path = $$BINDIR
@@ -70,17 +70,17 @@ macx {
     config.path = $$CONFDIR
     config.files += $${TARGET}.ini
 
+
     ## Instalar acceso directo en el menú del escritorio
-    desktop.path = $$DATADIR/applications
-    desktop.files += $${TARGET}.desktop
+    ## desktop.path = $$DATADIR/applications
+    ## desktop.files += $${TARGET}.desktop
 
     ## Instalar icono de aplicación
-    icon32.path = $$DATADIR/icons/hicolor/32x32/apps
-    icon32.files += ./data/32x32/$${TARGET}.png
+    ## icon32.path = $$DATADIR/icons/hicolor/32x32/apps
+    ## icon32.files += ./data/32x32/$${TARGET}.png
 
     ## Crear directorio de archivos variables
-    vardir.path = $$VARDIR
-    vardir.commands = :
+    ## vardir.path = $$VARDIR
+    ## vardir.commands = :
 }
-
 
