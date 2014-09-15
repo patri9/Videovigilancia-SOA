@@ -1,22 +1,15 @@
 #include "c_asincrono.h"
 
-
-C_Asincrono::C_Asincrono(QObject *parent, QTcpSocket *clientSocket, QLabel *label) :
+C_Asincrono::C_Asincrono(QObject *parent, QTcpSocket *clientSocket) :
     QObject(parent),
-    clientConnection(clientSocket),
-    qlabel(label)
-
+    clientConnection(clientSocket)
 {
-
-
     tam = 0;
     condicion = 0;
     cont=0;
     hex="%1";
 
     imagen = new QImage();
-
-
 }
 
 void C_Asincrono::FalloConexion()
@@ -26,29 +19,24 @@ void C_Asincrono::FalloConexion()
     clientConnection->deleteLater();
 }
 
+
 void C_Asincrono::readData()
 {
-
     flag = true;
     qint32 TotalsizeRect;
     qint32 x,y,ancho,alto;
     QVector<QRect> vRect;
-    qDebug() << "Entra a la clase de c_asincrono";
-
-
 
     while(flag)
     {
             switch (condicion)
             {
             case 0:
-
                 sizeCabecera = sizeof(tam_cabecera);
 
                 if( sizeCabecera <= clientConnection->bytesAvailable())
                 {
                     clientConnection->read((char*)&tam_cabecera,sizeof(tam_cabecera));
-                    qDebug() << "Tamaño Cabecera Antes: " << tam_cabecera;
                     condicion = 1;
                 }
                 else
@@ -57,25 +45,19 @@ void C_Asincrono::readData()
                     flag = false;
                     break;
                 }
-            case 1:
 
+            case 1:
                 TotalsizeCabecera = tam_cabecera;
                 if(TotalsizeCabecera <= clientConnection->bytesAvailable())
                 {
-                    qDebug() << "Tamaño Cabecera Despues: " << tam_cabecera;
                     clientConnection->read((char*)&size_cab,sizeof(size_cab));
                     QByteArray cabecera  = clientConnection->read(size_cab);
-                    qDebug() << "Cabecera: " << cabecera;
                     clientConnection->read((char*)&size_pro,sizeof(size_pro));
                     QByteArray proto = clientConnection->read(size_pro);
-                    qDebug() << "Protocolo: " << proto;
                     clientConnection->read((char*)&tam_nombre_camara,sizeof(tam_nombre_camara));
                     QByteArray nombre_camara  = clientConnection->read(tam_nombre_camara);
-                    qDebug() << "Nombre Cámara: " << nombre_camara;
                     clientConnection->read((char*)&timestamp,sizeof(timestamp));
 
-                    qDebug() << "Timestamp: " << timestamp << " segundos";
-                    qDebug() << "";
 
                     condicion = 2;
                 }
@@ -87,11 +69,9 @@ void C_Asincrono::readData()
                 }
 
             case 2:
-
                 if(sizeof(tam) <= clientConnection->bytesAvailable())
                 {
                     clientConnection->read((char*)&tam,4);
-                    qDebug() << "Tamaño Imagen: " << tam;
                     condicion = 3;
                 }
                 else
@@ -101,14 +81,11 @@ void C_Asincrono::readData()
                     break;
                 }
 
-
-
             case 3:
-
                 if(tam <= clientConnection->bytesAvailable())
                 {
-                    QByteArray image = clientConnection->read(tam);
-                    imagen->loadFromData(image, "jpeg");
+                    image = clientConnection->read(tam);
+                    //imagen->loadFromData(image, "jpeg");
                     condicion = 4;
                 }
                 else
@@ -118,13 +95,10 @@ void C_Asincrono::readData()
                     break;
                 }
 
-
             case 4:
-
                 if(sizeof(num_rect) <= clientConnection->bytesAvailable())
                 {
                     clientConnection->read((char*)&num_rect, sizeof(num_rect)); //Almaceno aqui el numero de rectangulos para el sig checkpoint
-                    qDebug() << "Numero de rectangulos : " << num_rect;
                     condicion = 5;
                 }
                 else
@@ -134,11 +108,7 @@ void C_Asincrono::readData()
                     break;
                 }
 
-
-
             case 5:
-
-
                 TotalsizeRect = sizeof(x)*4*num_rect;
                 if(TotalsizeRect <= clientConnection->bytesAvailable())
                 {
@@ -163,43 +133,25 @@ void C_Asincrono::readData()
                     break;
                 }
 
-
             case 6:
+                //Almacenamineto de imágenes en disco duro
 
-                    //Copia de la imagen.
-                    QImage frame = *imagen;
+                hex = QString("%1").arg(cont, 32, 16, QLatin1Char('0'));
+                QString Dir1 = hex.left(4);
+                QString Dir2 = hex.mid(4, 4);
+                QString nombre = hex;
+                QString ruta = QString(APP_VARDIR) + "/" + Dir1 + "/" + Dir2 + "/";
+                directorio.mkpath(ruta);
+                QFile imag(ruta+nombre+".jpg");
+                if(imag.isOpen())
+                {
+                    imag.write(image);
+                    //image.save(ruta+"/"+nombre+".jpg");
+                }
 
-                    //Se pintan los rectángulos a partir de la imagen.
-                    QPainter pintor (&frame);
-                    QColor color(0, 255, 0, 255);
-                    pintor.setPen(color);
-                    pintor.drawRects(vRect);
+                cont++;
 
-                    //Se convierte de QImage a QPixmap y se muestra.
-                    QPixmap pixmap;
-                    pixmap.convertFromImage(frame);
-                    qDebug() << "frame: " << frame;
-                    qDebug() << "pixmap: " << pixmap;
-                    qDebug() << "antes de mostrar";
-                    qlabel->setPixmap(pixmap);
-                    qDebug() << "Despues de mostrar";
-
-
-                     //Almacenamineto de imágenes en disco duro
-                    QImage image = *imagen;
-                    hex = QString("%1").arg(cont, 32, 16, QLatin1Char('0'));
-                    qDebug() << hex;
-                    QString Dir1 = hex.left(4);
-                    QString Dir2 = hex.mid(4, 4);
-                    QString nombre = hex;
-                    QString ruta = QString(APP_VARDIR) + "/" + Dir1 + "/" + Dir2 + "/";
-                    directorio.mkpath(ruta);
-                    image.save(ruta+"/"+nombre+".jpg");
-                    cont++;
-
-                    condicion = 0;
-
+                condicion = 0;
             }
-
     }
 }

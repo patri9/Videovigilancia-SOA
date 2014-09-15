@@ -15,7 +15,7 @@ class C_Asincrono : public QObject
 {
     Q_OBJECT
 public:
-    explicit C_Asincrono(QObject *parent = 0, QTcpSocket *clientSocket = 0, QLabel *qlabel = 0);
+    explicit C_Asincrono(QObject *parent = 0, QTcpSocket *clientSocket = 0);
 
     quint32 size_cab;
     quint32 size_pro;
@@ -33,10 +33,10 @@ public:
     QString hex;
     QDir directorio;
 
-    Ui::ViewerWindow *ui;
     QTcpSocket *clientConnection;
+
     QImage *imagen;
-    QLabel *qlabel;
+    QByteArray image;
 
 signals:
 

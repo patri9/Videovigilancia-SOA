@@ -1,11 +1,11 @@
 #include "viewerwindow.h"
 #include "c_asincrono.h"
 
-ViewerWindow::ViewerWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::ViewerWindow),
-    movie_(NULL),
-    camera(NULL),
+int ViewerWindow::sigHupSd[2];
+int ViewerWindow::sigTermSd[2];
+
+ViewerWindow::ViewerWindow(QObject *parent) :
+    QObject(parent),
     viewfinder(NULL),
     captureBuffer(NULL),
     imagen(NULL),
@@ -13,48 +13,80 @@ ViewerWindow::ViewerWindow(QWidget *parent) :
     networkSession(0),
     clientConnection(NULL)
 {
-    ui->setupUi(this);
-
     tam = 0;
     condicion = 0;
-
     flag_port = 0;
-
     cont=0;
     hex="%1";
-
     imagen = new QImage();
-
-    movie_ = new QMovie();
-    ui->label->setMovie(movie_);
 
     tcpServer = new QTcpServer(this);
 
     captureBuffer = new CaptureBuffer;
-    connect(captureBuffer, SIGNAL(senial(const QImage&)), this, SLOT(mostrar(const QImage&)));
-
-    //Desactivar los botones al iniciar la aplicación
-    ui->playbutton->setDisabled(true);
-    ui->stopbutton->setDisabled(true);
-    ui->pause->setDisabled(true);
-
-    connect(ui->playbutton, SIGNAL(clicked()), movie_, SLOT(start()));
-    connect(ui->stopbutton, SIGNAL(clicked()), movie_, SLOT(stop()));
+    //connect(captureBuffer, SIGNAL(senial(const QImage&)), this, SLOT(mostrar(const QImage&)));
+    on_actionCaptura_de_red_triggered();
 
     QSettings conf1(APP_CONFFILE, QSettings::IniFormat);
-    ui->reproducir->setChecked(conf1.value("Reproducir", false).toBool());
+    //ui->reproducir->setChecked(conf1.value("Reproducir", false).toBool());
 
     qRegisterMetaType< QImage >("QImage");
     qRegisterMetaType< QVector<QRect> > ("QVector<QRect>");
+
+    /*
+     * Config con QSettings
+     */
+    QSettings config("config", QSettings::IniFormat);
+    Port = config.value("Puerto ", "").toInt();
+    Host = config.value("IP ", "").toString();
+    device = config.value("Nombre ", "").toString();
+    intervalo = config.value("Reconectar ", "").toInt();
+    intervalo = 1000;
+    Dir = config.value("Directorio ",APP_VARDIR).toString();
+
+    // Cambia el usuario
+    setuid(config.value("uid",0).toInt());
+    // Cambia el grupo
+    setgid(config.value("gid",0).toInt());
+    // Cambia la umask
+    bool msk;
+    umask(config.value("umask",0).toString().toUInt(&msk,8));
+    /*
+     * Fin config
+     */
+
+    /*
+     * SEÑALES POSIX
+     */
+    // Crear las parejas de sockets UNIX
+    if (::socketpair(AF_UNIX, SOCK_STREAM, 0, sigHupSd))
+        qFatal("Couldn't create HUP socketpair");
+    if (::socketpair(AF_UNIX, SOCK_STREAM, 0, sigTermSd))
+        qFatal("Couldn't create TERM socketpair");
+
+    // Crear los objetos para monitorizar uno de los socket
+    // de cada pareja.
+    sigHupNotifier = new QSocketNotifier(sigHupSd[1],
+            QSocketNotifier::Read, this);
+    sigTermNotifier = new QSocketNotifier(sigTermSd[1],
+            QSocketNotifier::Read, this);
+
+    // Conectar la señal activated() de cada objeto
+    // QSocketNotifier con el slot correspondiente. Esta señal
+    // será emitida cuando hayan datos para ser leidos en el
+    // socket monitorizado.
+    connect(sigHupNotifier, SIGNAL(activated(int)), this,
+            SLOT(handleSigHup()));
+    connect(sigTermNotifier, SIGNAL(activated(int)), this,
+            SLOT(handleSigTerm()));
+      /*
+       *  SEÑALES POSIX
+       */
  }
 
 
 ViewerWindow::~ViewerWindow()
 {
-    delete ui;
-    delete movie_;
     delete captureBuffer;
-    delete camera;
     delete viewfinder;
     delete imagen;
     delete tcpServer;
@@ -75,131 +107,27 @@ void ViewerWindow::on_actionSalir_triggered()
 }
 
 
-void ViewerWindow::on_actionAbrir_triggered()
-{
-    QString fileName = QFileDialog::getOpenFileName(this, "Abrir archivo",
-                                                    QString(),
-                                                    "Video (*.mjpeg)");
-    movie_->setFileName(fileName);
-
-    if (!movie_->isValid()) {
-        QMessageBox::critical(this, tr("Error"),
-                       tr("No se pudo abrir el archivo o el formato"
-                          " no es inválido"));
-        return;
-    }
-    else if(movie_->isValid()){
-        ui->playbutton->setEnabled(true);
-        ui->stopbutton->setEnabled(true);
-        ui->pause->setEnabled(true);
-        //Abrir el video sin reproducirlo
-        movie_->start();
-        movie_->stop();
-
-        if(ui->reproducir->isChecked())
-            movie_->start();
-    }
-}
-
-
-void ViewerWindow::on_pause_clicked()
-{
-    movie_->setPaused(true);
-}
-
-
-void ViewerWindow::on_reproducir_stateChanged()
-{
-    QSettings conf(APP_CONFFILE, QSettings::IniFormat);
-    conf.setValue("Reproducir", ui->reproducir->isChecked());
-}
-
-
-//Acerca de...
-void ViewerWindow::on_actionAcerca_de_triggered()
-{
-    AcercaDeDialog acerca;
-    acerca.exec();
-}
-
-
-//Preferencias
-void ViewerWindow::on_actionPreferencias_triggered()
-{
-    Preferencias pref;
-    pref.exec();
-}
-
-
-//SLOT mostrar
-void ViewerWindow::mostrar(const QImage &imagen)
-{
-      QPixmap pixmap;
-
-      pixmap.convertFromImage(imagen);
-      ui->label->setPixmap(pixmap);
-}
-
-
-//Captura WebCam
-void ViewerWindow::on_actionCapturar_triggered()
-{
-
-
-    if (camera==NULL)
-    {
-        camera = new QCamera(conf.value("Camera").toByteArray());
-        captureBuffer = new CaptureBuffer;
-        camera->setViewfinder(captureBuffer);
-
-        if(camera->state()!=QCamera::ActiveState)
-        {
-            connect(captureBuffer, SIGNAL(senial(const QImage&)), this, SLOT(mostrar(const QImage&)));
-
-            camera->start();
-
-        }
-        else
-        {
-            if (camera->state()==QCamera::ActiveState)
-            {
-                camera->stop();
-                delete camera;
-            }
-        }
-    }
-}
-
-
-
-
 void ViewerWindow::send()
 {
-
-
     while(tcpServer->hasPendingConnections())
     {
         qDebug() << "Nueva conexión. ";
 
         clientConnection = tcpServer->nextPendingConnection();
 
-        C_Asincrono *paqAsinc = new C_Asincrono(this,clientConnection,ui->label);
+        C_Asincrono *paqAsinc = new C_Asincrono(this,clientConnection);
         connect(clientConnection,SIGNAL(readyRead()),paqAsinc, SLOT(readData())); //Enviar al slot de c_asincrono
         connect(clientConnection,SIGNAL(error(QAbstractSocket::SocketError)()),paqAsinc, SLOT(FalloConexion())); //Enviar al slot de c_asincrono
-
     }
 }
 
 
 void ViewerWindow::readData()
 {
-
     flag = true;
     qint32 TotalsizeRect;
     qint32 x,y,ancho,alto;
     QVector<QRect> vRect;
-
-
 
     while(flag)
     {
@@ -211,7 +139,6 @@ void ViewerWindow::readData()
                 if( sizeCabecera <= clientConnection->bytesAvailable())
                 {
                     clientConnection->read((char*)&tam_cabecera,sizeof(tam_cabecera));
-                    qDebug() << "Tamaño Cabecera Antes: " << tam_cabecera;
                     condicion = 1;
                 }
                 else
@@ -221,24 +148,13 @@ void ViewerWindow::readData()
                     break;
                 }
             case 1:
-
                 TotalsizeCabecera = tam_cabecera;
                 if(TotalsizeCabecera <= clientConnection->bytesAvailable())
                 {
-                    qDebug() << "Tamaño Cabecera Despues: " << tam_cabecera;
                     clientConnection->read((char*)&size_cab,sizeof(size_cab));
-                    QByteArray cabecera  = clientConnection->read(size_cab);
-                    qDebug() << "Cabecera: " << cabecera;
                     clientConnection->read((char*)&size_pro,sizeof(size_pro));
-                    QByteArray proto = clientConnection->read(size_pro);
-                    qDebug() << "Protocolo: " << proto;
                     clientConnection->read((char*)&tam_nombre_camara,sizeof(tam_nombre_camara));
-                    QByteArray nombre_camara  = clientConnection->read(tam_nombre_camara);
-                    qDebug() << "Nombre Cámara: " << nombre_camara;
                     clientConnection->read((char*)&timestamp,sizeof(timestamp));
-
-                    qDebug() << "Timestamp: " << timestamp << " segundos";
-                    qDebug() << "";
 
                     condicion = 2;
                 }
@@ -250,11 +166,9 @@ void ViewerWindow::readData()
                 }
 
             case 2:
-
                 if(sizeof(tam) <= clientConnection->bytesAvailable())
                 {
                     clientConnection->read((char*)&tam,4);
-                    qDebug() << "Tamaño Imagen: " << tam;
                     condicion = 3;
                 }
                 else
@@ -264,14 +178,11 @@ void ViewerWindow::readData()
                     break;
                 }
 
-
-
             case 3:
-
                 if(tam <= clientConnection->bytesAvailable())
                 {
-                    QByteArray image = clientConnection->read(tam);
-                    imagen->loadFromData(image, "jpeg");
+                    image = clientConnection->read(tam);
+                    //imagen->loadFromData(image, "jpeg");
                     condicion = 4;
                 }
                 else
@@ -281,13 +192,10 @@ void ViewerWindow::readData()
                     break;
                 }
 
-
             case 4:
-
                 if(sizeof(num_rect) <= clientConnection->bytesAvailable())
                 {
                     clientConnection->read((char*)&num_rect, sizeof(num_rect)); //Almaceno aqui el numero de rectangulos para el sig checkpoint
-                    qDebug() << "Numero de rectangulos : " << num_rect;
                     condicion = 5;
                 }
                 else
@@ -297,11 +205,7 @@ void ViewerWindow::readData()
                     break;
                 }
 
-
-
             case 5:
-
-
                 TotalsizeRect = sizeof(x)*4*num_rect;
                 if(TotalsizeRect <= clientConnection->bytesAvailable())
                 {
@@ -315,7 +219,6 @@ void ViewerWindow::readData()
                         QRect rect(x,y,ancho,alto);
                         vRect.append(rect);
                     }
-                    //Final segundo checkpoint
 
                     condicion = 6;
                 }
@@ -326,43 +229,26 @@ void ViewerWindow::readData()
                     break;
                 }
 
-
             case 6:
+                //Almacenamineto de imágenes en disco duro
+                hex = QString("%1").arg(cont, 32, 16, QLatin1Char('0'));
+                QString Dir1 = hex.left(4);
+                QString Dir2 = hex.mid(4, 4);
+                QString nombre = hex;
+                QString ruta = QString(APP_VARDIR) + "/" + Dir1 + "/" + Dir2 + "/";
+                directorio.mkpath(ruta);
+                QFile imag(ruta+nombre+".jpg");
+                if(imag.isOpen())
+                {
+                    imag.write(image);
+                }
 
-                    //Copia de la imagen.
-                    QImage frame = *imagen;
+                cont++;
 
-                    //Se pintan los rectángulos a partir de la imagen.
-                    QPainter pintor (&frame);
-                    QColor color(0, 255, 0, 255);
-                    pintor.setPen(color);
-                    pintor.drawRects(vRect);
-
-                    //Se convierte de QImage a QPixmap y se muestra.
-                    QPixmap pixmap;
-                    pixmap.convertFromImage(frame);
-                    ui->label->setPixmap(pixmap);
-
-
-                     //Almacenamineto de imágenes en disco duro
-                    QImage image = *imagen;
-                    hex = QString("%1").arg(cont, 32, 16, QLatin1Char('0'));
-                    qDebug() << hex;
-                    QString Dir1 = hex.left(4);
-                    QString Dir2 = hex.mid(4, 4);
-                    QString nombre = hex;
-                    QString ruta = QString(APP_VARDIR) + "/" + Dir1 + "/" + Dir2 + "/";
-                    directorio.mkpath(ruta);
-                    image.save(ruta+"/"+nombre+".jpg");
-                    cont++;
-
-                    condicion = 0;
-
+                condicion = 0;
             }
-
     }
 }
-
 
 
 void ViewerWindow::FalloConexion()
@@ -375,20 +261,116 @@ void ViewerWindow::FalloConexion()
 
 void ViewerWindow::on_actionCaptura_de_red_triggered()
 { 
-
     //QTcpServer a la espera de conexiones
     tcpServer = new QTcpServer(this);
 
     if (!tcpServer->listen(QHostAddress::Any, 15000))
     {
-        QMessageBox::critical(this, tr("Server "),
-                              tr("Unable to start the server: %1.")
-                              .arg(tcpServer->errorString()));
-        close();
+        tcpServer->errorString();
+
         return;
     }
-
-
     connect(tcpServer, SIGNAL(newConnection()), this, SLOT(send()));
+}
 
+
+//
+// Manejador de la señal SIGHUP
+//
+void ViewerWindow::hupSignalHandler(int)
+{
+    char a = 1;
+    ::write(sigHupSd[0], &a, sizeof(a));
+}
+
+//
+// Manejador de la señal SIGTERM
+//
+void ViewerWindow::termSignalHandler(int)
+{
+    char a = 1;
+    ::write(sigTermSd[0], &a, sizeof(a));
+}
+
+//
+// Configurar los manejadores de señal
+//
+int setupUnixSignalHandlers()
+{
+    struct ::sigaction hup, term;
+
+    // Señal SIGHUP //
+    hup.sa_handler = &ViewerWindow::hupSignalHandler;
+    // Vaciamos la máscara para indicar que no queremos bloquear
+    // la llegada de ninguna señal POSIX.
+    sigemptyset(&hup.sa_mask);
+    // SA_RESTART indica que si la señal interrumpe alguna
+    // llamada al sistema lanzada desde otro punto del programa,
+    // al volver del manejador la llamada al sistema debe
+    // continuar. En caso contrario dicha llamada retornará
+    // indicando un error.
+    hup.sa_flags = SA_RESTART;
+
+    // Establecer manejador de la señal SIGHUP
+    if (::sigaction(SIGHUP, &hup, 0) > 0)
+    return 1;
+
+     // Señal SIGTERM //
+    term.sa_handler = &ViewerWindow::termSignalHandler;
+    sigemptyset(&term.sa_mask);
+    term.sa_flags = SA_RESTART;
+
+    // Establecer manejador de la señal SIGTERM
+    if (::sigaction(SIGTERM, &term, 0) > 0)
+    return 2;
+
+    return 0;
+}
+
+void ViewerWindow::handleSigHup()
+{
+    // Desactivar la monitorización para que por el momento no
+    // lleguen más señales de Qt
+    sigHupNotifier->setEnabled(false);
+    // Leer y desechar el byte enviado
+    char tmp;
+    ::read(sigHupSd[1], &tmp, sizeof(tmp));
+
+    qApp->quit();
+    qDebug() << " //***** Señal SigHup *****// " ;
+    qDebug() << " " ;
+    //deleteLater();
+
+    //Configuración del socket
+    //QSettings config(APP_CONFFILE, QSettings::IniFormat);
+    QSettings config("Config", QSettings::IniFormat);
+    Port = config.value("Puerto ", "").toInt();
+    Host = config.value("IP ", "").toString();
+    device = config.value("Nombre ", "").toString();
+    intervalo = config.value("Reconectar ", "").toInt();
+    intervalo = 1000;
+    Dir = config.value("Directorio ",APP_VARDIR).toString();
+
+    // Activar la monitorización para que vuelvan a llegar
+    // señales de Qt
+    sigHupNotifier->setEnabled(true);
+}
+
+void ViewerWindow::handleSigTerm()
+{
+    // Desactivar la monitorización para que por el momento no
+    // lleguen más señales de Qt
+    sigTermNotifier->setEnabled(false);
+    // Leer y desechar el byte enviado
+    char tmp;
+    ::read(sigTermSd[1], &tmp, sizeof(tmp));
+
+    qApp->quit();
+    qDebug() << " //***** Señal SigTerm *****//" ;
+    qDebug() << " " ;
+    deleteLater();
+
+    // Activar la monitorización para que vuelvan a llegar
+    // señales de Qt
+    sigTermNotifier->setEnabled(true);
 }
