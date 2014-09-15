@@ -1,1 +1,3 @@
-Añadidas nuevas funciones de servidor asíncrono multicliente, además de tener incorporado la función de ejecutable mediante qmake y el almacenamiento de imagenes en disco duro.
+
+Añadida la función del servidor con demonio, es decir, al demonizar el servidor, éste funciona en background como un servicio más del sistema.
+
