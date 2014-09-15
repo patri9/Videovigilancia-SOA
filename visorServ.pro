@@ -15,22 +15,16 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         viewerwindow.cpp \
-    acercadedialog.cpp \
-    preferencias.cpp \
     capturebuffer.cpp \
     cvmatandqimage.cpp \
     c_asincrono.cpp
 
 HEADERS  += viewerwindow.h \
-    acercadedialog.h \
-    preferencias.h \
     capturebuffer.h \
     cvmatandqimage.h \
     c_asincrono.h
 
-FORMS    += viewerwindow.ui \
-    acercadedialog.ui \
-    preferencias.ui
+FORMS    +=
 
 INCLUDEPATH += /usr/local/include
 LIBS += -L/usr/local/lib \
@@ -42,7 +36,7 @@ OTHER_FILES += \
     opencv.pri \
     QtOpenCV.pri
 
-unix {          # Esta configuración específica de Linux y UNIX
+macx {          # Esta configuración específica de Linux y UNIX
     # Variables
     #
     isEmpty(PREFIX) {
@@ -88,4 +82,3 @@ unix {          # Esta configuración específica de Linux y UNIX
     vardir.path = $$VARDIR
     vardir.commands = :
 }
-
