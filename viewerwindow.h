@@ -67,6 +67,12 @@ public:
 
     qint32 flag_port;
 
+signals:
+     void error(QAbstractSocket::SocketError socketError);
+
+protected:
+    void incomingConnection(int socketDescriptor);
+
 
 private slots:
     void on_Quit_clicked();
@@ -81,11 +87,13 @@ private slots:
 
     void mostrar(const QImage &imagen);
 
-    void readData();
-
     void send();
 
+    void readData();
+
     void FalloConexion();
+
+    void recibir_Dibujo(const QImage &imagen2);
 
 private:
     Ui::ViewerWindow *ui;
@@ -96,11 +104,12 @@ private:
     QImage *imagen;
     QSettings conf;
 
-
     //Server
     QTcpServer *tcpServer;
     QNetworkSession *networkSession;
     QTcpSocket *clientConnection;
+
+    C_Asincrono updated;
 
 };
 

@@ -1,5 +1,6 @@
 #include "viewerwindow.h"
 #include "c_asincrono.h"
+#include "c_tcpserver.h"
 
 ViewerWindow::ViewerWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -140,6 +141,18 @@ void ViewerWindow::mostrar(const QImage &imagen)
       ui->label->setPixmap(pixmap);
 }
 
+//SLOT recibirDibujo
+void ViewerWindow::recibir_Dibujo(const QImage &imagen2)
+{
+    QPixmap pixmap;
+
+    pixmap.convertFromImage(imagen2);
+    ui->label->setPixmap(pixmap);
+
+    qDebug() << "Señal de recibir dibujo captada";
+
+}
+
 
 //Captura WebCam
 void ViewerWindow::on_actionCapturar_triggered()
@@ -179,13 +192,10 @@ void ViewerWindow::send()
 
     while(tcpServer->hasPendingConnections())
     {
-        qDebug() << "Nueva conexión. ";
 
+        qDebug() << "Se va al send del viewer ";
         clientConnection = tcpServer->nextPendingConnection();
 
-        C_Asincrono *paqAsinc = new C_Asincrono(this,clientConnection,ui->label);
-        connect(clientConnection,SIGNAL(readyRead()),paqAsinc, SLOT(readData())); //Enviar al slot de c_asincrono
-        connect(clientConnection,SIGNAL(error(QAbstractSocket::SocketError)()),paqAsinc, SLOT(FalloConexion())); //Enviar al slot de c_asincrono
 
     }
 }
@@ -377,7 +387,8 @@ void ViewerWindow::on_actionCaptura_de_red_triggered()
 { 
 
     //QTcpServer a la espera de conexiones
-    tcpServer = new QTcpServer(this);
+    tcpServer = new C_TcpServer(this);
+            qDebug() << "Crea objeto C_Tcpserver ";
 
     if (!tcpServer->listen(QHostAddress::Any, 15000))
     {
@@ -386,9 +397,8 @@ void ViewerWindow::on_actionCaptura_de_red_triggered()
                               .arg(tcpServer->errorString()));
         close();
         return;
+
     }
-
-
-    connect(tcpServer, SIGNAL(newConnection()), this, SLOT(send()));
+    qDebug() << "Fin método Captura de red";
 
 }

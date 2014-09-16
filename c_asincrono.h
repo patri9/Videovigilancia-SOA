@@ -10,12 +10,13 @@
 #include <QPixmap>
 #include <QPainter>
 #include <QDir>
+#include "qthread.h"
 
-class C_Asincrono : public QObject
+class C_Asincrono : public QThread
 {
     Q_OBJECT
 public:
-    explicit C_Asincrono(QObject *parent = 0, QTcpSocket *clientSocket = 0, QLabel *qlabel = 0);
+    explicit C_Asincrono(QObject *parent = 0, qintptr socketDescriptor = 0, QLabel *qlabel = 0);
 
     quint32 size_cab;
     quint32 size_pro;
@@ -34,14 +35,20 @@ public:
     QDir directorio;
 
     Ui::ViewerWindow *ui;
-    QTcpSocket *clientConnection;
+    QTcpSocket clientConnection;
     QImage *imagen;
+    qintptr socketDescriptor;
     QLabel *qlabel;
 
+    Ui::ViewerWindow updated;
+
+    void run();
+
 signals:
+    void senial_img(QImage);
 
 public slots:
-    void readData();
+    //void readData();
     void FalloConexion();
 
 };

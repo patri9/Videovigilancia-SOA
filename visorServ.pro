@@ -19,14 +19,16 @@ SOURCES += main.cpp\
     preferencias.cpp \
     capturebuffer.cpp \
     cvmatandqimage.cpp \
-    c_asincrono.cpp
+    c_asincrono.cpp \
+    c_tcpserver.cpp
 
 HEADERS  += viewerwindow.h \
     acercadedialog.h \
     preferencias.h \
     capturebuffer.h \
     cvmatandqimage.h \
-    c_asincrono.h
+    c_asincrono.h \
+    c_tcpserver.h
 
 FORMS    += viewerwindow.ui \
     acercadedialog.ui \

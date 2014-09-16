@@ -1,9 +1,9 @@
 #include "c_asincrono.h"
 
-
-C_Asincrono::C_Asincrono(QObject *parent, QTcpSocket *clientSocket, QLabel *label) :
-    QObject(parent),
-    clientConnection(clientSocket),
+//Aquí hay que sustituir el socket por un socketdescriptor, una semilla para tomar depués el socket
+C_Asincrono::C_Asincrono(QObject *parent, qintptr socketDescriptor, QLabel *label) :
+    QThread(parent),
+    socketDescriptor(socketDescriptor),
     qlabel(label)
 
 {
@@ -21,13 +21,27 @@ C_Asincrono::C_Asincrono(QObject *parent, QTcpSocket *clientSocket, QLabel *labe
 
 void C_Asincrono::FalloConexion()
 {
-    qDebug() << "Error de conexión: " << clientConnection->errorString();
-    clientConnection->disconnect();
-    clientConnection->deleteLater();
+    qDebug() << "Error de conexión: " << clientConnection.errorString();
+    clientConnection.disconnect();
+    clientConnection.deleteLater();
 }
 
-void C_Asincrono::readData()
+void C_Asincrono::run()
 {
+
+     QTcpSocket clientConnection;
+     qDebug() << "Entra en el run";
+
+    if (!(clientConnection.setSocketDescriptor(socketDescriptor)))
+    {
+        qDebug() << "Emite FalloConexion";
+        emit FalloConexion();
+        qDebug() << "Retorna al no encontrar socketdescriptor";
+        return;
+    }
+
+    qDebug() << clientConnection.socketDescriptor();
+    qDebug() << "Sale sin problemas del if";
 
     flag = true;
     qint32 TotalsizeRect;
@@ -36,170 +50,119 @@ void C_Asincrono::readData()
     qDebug() << "Entra a la clase de c_asincrono";
 
 
-
     while(flag)
     {
-            switch (condicion)
-            {
-            case 0:
 
                 sizeCabecera = sizeof(tam_cabecera);
-
-                if( sizeCabecera <= clientConnection->bytesAvailable())
+                while(sizeCabecera > clientConnection.bytesAvailable())
                 {
-                    clientConnection->read((char*)&tam_cabecera,sizeof(tam_cabecera));
-                    qDebug() << "Tamaño Cabecera Antes: " << tam_cabecera;
-                    condicion = 1;
+                    clientConnection.waitForReadyRead();
                 }
-                else
-                {
-                    condicion = 0;
-                    flag = false;
-                    break;
-                }
-            case 1:
+                clientConnection.read((char*)&tam_cabecera,sizeof(tam_cabecera));
+                qDebug() << "Tamaño Cabecera Antes: " << tam_cabecera;
 
                 TotalsizeCabecera = tam_cabecera;
-                if(TotalsizeCabecera <= clientConnection->bytesAvailable())
-                {
-                    qDebug() << "Tamaño Cabecera Despues: " << tam_cabecera;
-                    clientConnection->read((char*)&size_cab,sizeof(size_cab));
-                    QByteArray cabecera  = clientConnection->read(size_cab);
-                    qDebug() << "Cabecera: " << cabecera;
-                    clientConnection->read((char*)&size_pro,sizeof(size_pro));
-                    QByteArray proto = clientConnection->read(size_pro);
-                    qDebug() << "Protocolo: " << proto;
-                    clientConnection->read((char*)&tam_nombre_camara,sizeof(tam_nombre_camara));
-                    QByteArray nombre_camara  = clientConnection->read(tam_nombre_camara);
-                    qDebug() << "Nombre Cámara: " << nombre_camara;
-                    clientConnection->read((char*)&timestamp,sizeof(timestamp));
 
-                    qDebug() << "Timestamp: " << timestamp << " segundos";
-                    qDebug() << "";
-
-                    condicion = 2;
-                }
-                else
+                while(TotalsizeCabecera >= clientConnection.bytesAvailable())
                 {
-                    condicion = 1;
-                    flag = false;
-                    break;
-                }
-
-            case 2:
-
-                if(sizeof(tam) <= clientConnection->bytesAvailable())
-                {
-                    clientConnection->read((char*)&tam,4);
-                    qDebug() << "Tamaño Imagen: " << tam;
-                    condicion = 3;
-                }
-                else
-                {
-                    condicion = 2;
-                    flag = false;
-                    break;
+                    clientConnection.waitForReadyRead();
                 }
 
 
+                qDebug() << "Tamaño Cabecera Despues: " << tam_cabecera;
+                clientConnection.read((char*)&size_cab,sizeof(size_cab));
+                QByteArray cabecera  = clientConnection.read(size_cab);
+                qDebug() << "Cabecera: " << cabecera;
+                clientConnection.read((char*)&size_pro,sizeof(size_pro));
+                QByteArray proto = clientConnection.read(size_pro);
+                qDebug() << "Protocolo: " << proto;
+                clientConnection.read((char*)&tam_nombre_camara,sizeof(tam_nombre_camara));
+                QByteArray nombre_camara  = clientConnection.read(tam_nombre_camara);
+                qDebug() << "Nombre Cámara: " << nombre_camara;
+                clientConnection.read((char*)&timestamp,sizeof(timestamp));
 
-            case 3:
+                qDebug() << "Timestamp: " << timestamp << " segundos";
+                qDebug() << "";
 
-                if(tam <= clientConnection->bytesAvailable())
+                while(sizeof(tam) >= clientConnection.bytesAvailable())
                 {
-                    QByteArray image = clientConnection->read(tam);
-                    imagen->loadFromData(image, "jpeg");
-                    condicion = 4;
-                }
-                else
-                {
-                    condicion = 3;
-                    flag = false;
-                    break;
-                }
-
-
-            case 4:
-
-                if(sizeof(num_rect) <= clientConnection->bytesAvailable())
-                {
-                    clientConnection->read((char*)&num_rect, sizeof(num_rect)); //Almaceno aqui el numero de rectangulos para el sig checkpoint
-                    qDebug() << "Numero de rectangulos : " << num_rect;
-                    condicion = 5;
-                }
-                else
-                {
-                    condicion = 4;
-                    flag = false;
-                    break;
+                    clientConnection.waitForReadyRead();
                 }
 
 
+                clientConnection.read((char*)&tam,4);
+                qDebug() << "Tamaño Imagen: " << tam;
 
-            case 5:
+                while(tam >= clientConnection.bytesAvailable())
+                {
+                    clientConnection.waitForReadyRead();
+                }
 
+
+                QByteArray imag = clientConnection.read(tam);
+                imagen->loadFromData(imag, "jpeg");
+
+                while(sizeof(num_rect) >= clientConnection.bytesAvailable())
+                {
+                    clientConnection.waitForReadyRead();
+                }
+
+
+                clientConnection.read((char*)&num_rect, sizeof(num_rect)); //Almaceno aqui el numero de rectangulos para el sig checkpoint
+                qDebug() << "Numero de rectangulos : " << num_rect;
 
                 TotalsizeRect = sizeof(x)*4*num_rect;
-                if(TotalsizeRect <= clientConnection->bytesAvailable())
-                {
-                    for(int i=0; i<num_rect; i++)
-                    {
-                        clientConnection->read((char*)&x,sizeof(x));;
-                        clientConnection->read((char*)&y,sizeof(y));
-                        clientConnection->read((char*)&ancho,sizeof(ancho));
-                        clientConnection->read((char*)&alto,sizeof(alto));
 
-                        QRect rect(x,y,ancho,alto);
-                        vRect.append(rect);
-                    }
-                    //Final segundo checkpoint
-
-                    condicion = 6;
-                }
-                else
+                while(TotalsizeRect >= clientConnection.bytesAvailable())
                 {
-                    condicion = 5;
-                    flag = false;
-                    break;
+
+                    clientConnection.waitForReadyRead();
                 }
 
 
-            case 6:
+                for(int i=0; i<num_rect; i++)
+                {
+                    clientConnection.read((char*)&x,sizeof(x));;
+                    clientConnection.read((char*)&y,sizeof(y));
+                    clientConnection.read((char*)&ancho,sizeof(ancho));
+                    clientConnection.read((char*)&alto,sizeof(alto));
 
-                    //Copia de la imagen.
-                    QImage frame = *imagen;
-
-                    //Se pintan los rectángulos a partir de la imagen.
-                    QPainter pintor (&frame);
-                    QColor color(0, 255, 0, 255);
-                    pintor.setPen(color);
-                    pintor.drawRects(vRect);
-
-                    //Se convierte de QImage a QPixmap y se muestra.
-                    QPixmap pixmap;
-                    pixmap.convertFromImage(frame);
-                    qDebug() << "frame: " << frame;
-                    qDebug() << "pixmap: " << pixmap;
-                    qDebug() << "antes de mostrar";
-                    qlabel->setPixmap(pixmap);
-                    qDebug() << "Despues de mostrar";
+                    QRect rect(x,y,ancho,alto);
+                    vRect.append(rect);
+                }
 
 
-                     //Almacenamineto de imágenes en disco duro
-                    QImage image = *imagen;
-                    hex = QString("%1").arg(cont, 32, 16, QLatin1Char('0'));
-                    qDebug() << hex;
-                    QString Dir1 = hex.left(4);
-                    QString Dir2 = hex.mid(4, 4);
-                    QString nombre = hex;
-                    QString ruta = QString(APP_VARDIR) + "/" + Dir1 + "/" + Dir2 + "/";
-                    directorio.mkpath(ruta);
-                    image.save(ruta+"/"+nombre+".jpg");
-                    cont++;
+                //Copia de la imagen.
+                QImage frame = *imagen;
 
-                    condicion = 0;
+                //Se pintan los rectángulos a partir de la imagen.
+                QPainter pintor (&frame);
+                QColor color(0, 255, 0, 255);
+                pintor.setPen(color);
+                pintor.drawRects(vRect);
 
-            }
+                //Se convierte de QImage a QPixmap y se muestra.
+                QPixmap pixmap;
+                pixmap.convertFromImage(frame);
+                qDebug() << "frame: " << frame;
+                qDebug() << "pixmap: " << pixmap;
+                qDebug() << "antes de mostrar";
+                emit senial_img(frame);
+                qDebug() << "Despues de mostrar";
+
+
+                //Almacenamineto de imágenes en disco duro
+                QImage image = *imagen;
+                hex = QString("%1").arg(cont, 32, 16, QLatin1Char('0'));
+                qDebug() << hex;
+                QString Dir1 = hex.left(4);
+                QString Dir2 = hex.mid(4, 4);
+                QString nombre = hex;
+                QString ruta = QString(APP_VARDIR) + "/" + Dir1 + "/" + Dir2 + "/";
+                directorio.mkpath(ruta);
+                image.save(ruta+"/"+nombre+".jpg");
+                cont++;
+
 
     }
 }
